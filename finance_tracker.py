@@ -1,10 +1,15 @@
-import pandas as pd
-import gspread
 from tkinter import *
 from tkinter import ttk
+import os
+from dotenv import load_dotenv
+import gspread
+import pandas as pd
 
-#gspread
-gc = gspread.service_account(filename='finance-tracker-project-480905-9a0bc6c23b2a.json')
+load_dotenv()
+
+CREDENTIALS = os.getenv("GOOGLE_CREDS")
+
+gc = gspread.service_account(filename=CREDENTIALS)
 test_df = pd.read_csv("test.csv")
 
 worksheet = gc.open("Finance Project Sheet").sheet1
