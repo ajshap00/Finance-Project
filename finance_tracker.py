@@ -22,17 +22,13 @@ col_a = worksheet.col_values(1)
 
 def add_data():
     for i in test_df:
-        try:
-            worksheet.append_row(values={
+        worksheet.append_row(values={
                 "Balance": i[1],
                 "Transactions": i[0],
                 "Date": i[2],
                 "Withdraw": i[0] if i[0] > 0 else "",
                 "Deposit": i[0] if i[0] < 0 else ""}
             )
-        except ValueError:
-            return "Try again"
-
 class Transactions:
     def __init__(self, desc, am, date):
         self.desc = desc
@@ -134,4 +130,3 @@ class Interface:
 root = Tk()
 Interface(root)
 root.mainloop()
-add_data()
