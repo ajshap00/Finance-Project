@@ -1,4 +1,21 @@
-Description, Amount, Date, Withdraw, Deposit
-Wendys,20,11-25-25
-test,20,11-8-21
-test,90,11-9-24
+Description,Amount,Date,Withdraw,Deposit
+Wendys,-20,11-25-25
+test,-20,11-8-21
+test,-90,11-9-24
+test,-20,11-1-11
+test,-20,11-25-25
+pay,20,12-11-25
+test2,-20,11-12-25
+another test,-70,11-22-24
+again,-20,11-55-24
+big test,-20,11-22-22
+more,-20,11-11-11
+super test,-20,11-11-11
+test again,11,55-55-55
+test,20.0,1-1-11
+input test,20.0,1-1-11
+what,3.0,32
+confused,2.0,2
+testaginasding,124.0,erlksjglkew
+dsflkdnbgnljk kjk,757.0,lkndfsv
+ugyhubyh,456.0,3-7-77
