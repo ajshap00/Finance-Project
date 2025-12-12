@@ -6,11 +6,9 @@ import gspread
 import pandas as pd
 
 load_dotenv()
-
 CREDENTIALS = os.getenv("GOOGLE_CREDS")
 
 gc = gspread.service_account(filename=CREDENTIALS)
-
 worksheet = gc.open("Finance Project Sheet").sheet1
 
 def Run():
@@ -47,6 +45,7 @@ def Run():
 
     if rows_to_add:
         worksheet.append_rows(rows_to_add)
+
 class Transactions:
     def __init__(self, desc, am, date):
         self.desc = desc
