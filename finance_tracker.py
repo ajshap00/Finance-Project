@@ -10,25 +10,43 @@ load_dotenv()
 CREDENTIALS = os.getenv("GOOGLE_CREDS")
 
 gc = gspread.service_account(filename=CREDENTIALS)
-test_df = pd.read_csv("test.csv")
 
 worksheet = gc.open("Finance Project Sheet").sheet1
-worksheet.clear()
 
-headers = ["Balance", "Transactions", "Date", "Withdraws", "Deposits"]
-worksheet.update(range_name="A1:F1", values=[headers])
+def Run():
+    test_df = pd.read_csv("test.csv")
+    worksheet.clear()
+    headers = ["Balance", "Transactions", "Date", "Withdraws", "Deposits"]
+    worksheet.update(range_name="A1:F1", values=[headers])
 
-col_a = worksheet.col_values(1)
+    col_a = worksheet.col_values(1)
+    balance = float(col_a[-1] if len(col_a) > 1 else 0)
+    rows_to_add=[]
 
-def add_data():
-    for i in test_df:
-        worksheet.append_row(values={
-                "Balance": i[1],
-                "Transactions": i[0],
-                "Date": i[2],
-                "Withdraw": i[0] if i[0] > 0 else "",
-                "Deposit": i[0] if i[0] < 0 else ""}
-            )
+    def add_data(description, amount, date):
+        nonlocal balance
+        balance += amount
+        deposit = amount if amount < 0 else ""
+        withdraw = amount if amount > 0 else ""
+
+        data = [
+            balance,
+            description,
+            date,
+            deposit,
+            withdraw
+        ]
+        rows_to_add.append(data)
+
+    for i, row in test_df.iterrows():
+        description = row["Description"]
+        amount = row["Amount"]
+        date = row["Date"]
+
+        add_data(description,amount,date)
+
+    if rows_to_add:
+        worksheet.append_rows(rows_to_add)
 class Transactions:
     def __init__(self, desc, am, date):
         self.desc = desc
@@ -55,7 +73,7 @@ class Interface:
         #Functions
         def button_pressed():
             input_description = get_description()
-            input_amount = get_amount()
+            input_amount = float(get_amount())
             input_date = get_date()
 
             trans = Transactions(input_description, input_amount, input_date)
@@ -64,6 +82,8 @@ class Interface:
             clear_description()
             clear_amount()
             clear_date()
+
+            Run()
 
             ttk.Label(mainframe, text=input_description).grid(column=1,row=5,sticky=(S))
             ttk.Label(mainframe, text=input_amount).grid(column=2,row=5,sticky=(S))
