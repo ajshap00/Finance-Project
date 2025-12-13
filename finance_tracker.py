@@ -13,38 +13,35 @@ CREDENTIALS = os.getenv("GOOGLE_CREDS")
 gc = gspread.service_account(filename=CREDENTIALS)
 worksheet = gc.open("Finance Project Sheet").sheet1
 
+sheet_headers = ["Balance", "Description", "Date", "Withdraws", "Deposits"]
+csv_headers = ["Description", "Amount", "Date"]
+rows_to_add = []
+
 def Run():
-    test_df = pd.read_csv("finance_sheet.csv")
-    worksheet.clear()
-    headers = ["Balance", "Transactions", "Date", "Withdraws", "Deposits"]
-    worksheet.update(range_name="A1:F1", values=[headers])
+    fs = pd.read_csv("finance_sheet.csv")
+    fs['Date'] = pd.to_datetime(fs["Date"])
+    fs = fs.sort_values(by=['Date'])
 
-    col_a = worksheet.col_values(1)
-    balance = float(col_a[-1] if len(col_a) > 1 else 0)
+    balance = 0
+    global rows_to_add
+    rows_to_add = []
 
-    rows_to_add=[]
-
-    def add_data(description, amount, date):
-        nonlocal balance
+    for i, row in fs.iterrows():
+        amount = float(row["Amount"])
         balance += float(amount)
-        deposit = amount if amount < 0 else ""
-        withdraw = amount if amount > 0 else ""
 
-        data = [
-            float(balance),
-            description.upper(),
-            date,
-            deposit,
-            withdraw
-        ]
-        rows_to_add.append(data)
+        deposit = amount if amount > 0 else ""
+        withdraw = -amount if amount < 0 else ""
 
-    for i, row in test_df.iterrows():
-        description = row["Description"]
-        amount = row["Amount"]
-        date = row["Date"]
+        description = row["Description"].title()
+        date = row["Date"].strftime("%Y-%m-%d") 
 
-        add_data(description,amount,date)
+        rows_to_add.append([balance, description, date, withdraw, deposit])
+
+    rows_to_add = rows_to_add[::-1]
+
+    worksheet.clear()
+    worksheet.update(range_name="A1:F1", values=[sheet_headers])
 
     if rows_to_add:
         worksheet.append_rows(rows_to_add)
@@ -63,26 +60,33 @@ class Transactions:
             }
         
         new_data = pd.DataFrame([new_row])
-        new_data.to_csv('finance_sheet.csv', index=False, mode='a', header=False)
+
+        if not os.path.exists('finance_sheet.csv') or os.path.getsize('finance_sheet.csv') == 0:
+            new_data.to_csv('finance_sheet.csv', index=False, header=True)
+        else:
+            new_data.to_csv('finance_sheet.csv', index=False, mode='a', header=False)
 
 class Interface:
     def __init__(self, root):   
-
         #Functions
+        #Retry when bad inputs
         def retry():
             clear_description()
             clear_amount()
             clear_day()
+
             self.label_desc.config(text="")
-            self.label_am.config(text="ENTER VALID INPUTS")
+            self.label_am.config(text="Enter Valid Inputs")
             self.label_date.config(text="")
 
+        #When done is pressed
         def button_pressed(event = None):
             try:
                 if len(get_description()) > 0:
                     input_description = get_description()
                 else:
                     retry()
+                    return
                 input_amount = float(get_amount())            
                 input_date = get_day()           
 
@@ -93,15 +97,33 @@ class Interface:
                 clear_amount()
                 clear_day()
 
-                Run()
-                
                 self.label_desc.config(text=input_description)
                 self.label_am.config(text=input_amount)
                 self.label_date.config(text=input_date)
+
+                Run()
                 return
             except ValueError:
                 retry()
+                return
+        
+        #Clears data in csv, sheet, and local
+        def clear_pressed():
+            worksheet.clear()
+            worksheet.update(range_name="A1:F1", values=[sheet_headers])
+            
+            empty_df = pd.DataFrame(columns=csv_headers)
+            empty_df.to_csv("finance_sheet.csv", index=False)
 
+            global rows_to_add
+            rows_to_add = []
+
+            clear_description()
+            clear_amount()
+            clear_day()
+            return
+        
+        #Getters and Clears
         def get_description():
             return description_entry.get()
         def clear_description():
@@ -118,54 +140,106 @@ class Interface:
             date_entry.set_date(datetime.date.today())
             return
 
-        #mainframe
+        #Mainframe
         root.title("Finance Manager")
         root.geometry("450x300")
         root.resizable(False, False)
-        mainframe = ttk.Frame(root, width=450, height=200, padding=(3,3,12,12))
+
+        #Style
+        style = ttk.Style()
+        style.theme_use("default")
+        
+        style.configure(
+            "TFrame",
+            background="#FFFFFF"
+        )
+        style.configure(
+            "Title.TLabel",
+            foreground="#2E2E2E",
+            font=("Gilroy", 12, "bold")
+        )
+        style.configure(
+            "TLabel",
+            background="#ffffff",
+            foreground="#636363",
+            font=("Gilroy", 10, "bold")
+        )
+        style.configure(
+            "TButton",
+            relief="flat",
+            borderwidth=0,
+            foreground="#2E2E2E",
+            background="#ddd0e2",
+            padding=(10,6),
+            font=("Gilroy", 11, "bold")
+        )
+        style.map(
+            "TButton",
+            foreground=[("active","#FFFFFF")],
+            background=[("active","#947FF1")],
+        )
+        style.configure(
+            "TEntry",
+            relief="flat",
+            borderwidth=0,
+            fieldbackground="#ECEBEB",
+            foreground="#525252",
+            font=("Gilroy", 10, "bold")
+        )
+
+        #Frames
+        mainframe = ttk.Frame(root, padding=(3,3,12,12))
         mainframe.grid(column=0,row=0,sticky=(N,W,E,S))
 
         #Labels
-        self.label_newtrans = ttk.Label(mainframe,text="ENTER NEW TRANSACTION")
-        self.label_newtrans.grid(column=1,row=1, columnspan=3, sticky=(S))
-        self.label_desc_text = ttk.Label(mainframe,text="Description:")
-        self.label_desc_text.grid(column=1,row=2,sticky=(S))
-        self.label_am_text = ttk.Label(mainframe,text="Amount:")
-        self.label_am_text.grid(column=2,row=2,sticky=(S))
-        self.label_date_text = ttk.Label(mainframe,text="Date:")
-        self.label_date_text.grid(column=3,row=2,sticky=(S))
-
         self.label_desc = ttk.Label(mainframe, text="")
-        self.label_desc.grid(column=1,row=5,sticky=(S))
+        self.label_desc.grid(column=2,row=3,sticky=(S))
         self.label_am = ttk.Label(mainframe, text="")
         self.label_am.grid(column=2,row=5,sticky=(S))
         self.label_date = ttk.Label(mainframe, text="")
-        self.label_date.grid(column=3,row=5,sticky=(S))
+        self.label_date.grid(column=2,row=7,sticky=(S))
 
-        #Buttons
+        self.label_newtrans = ttk.Label(mainframe,text="Enter New Transaction", style="Title.TLabel")
+        self.label_newtrans.grid(column=1,row=1, columnspan=3, sticky=(S))
+        self.label_desc_text = ttk.Label(mainframe,text="Description:")
+        self.label_desc_text.grid(column=1,row=2,sticky=(W))
+        self.label_am_text = ttk.Label(mainframe,text="Amount:")
+        self.label_am_text.grid(column=1,row=4,sticky=(W))
+        self.label_date_text = ttk.Label(mainframe,text="Date:")
+        self.label_date_text.grid(column=1,row=6,sticky=(W))
+        self.label_newtrans.grid(column=1,row=1, columnspan=3, sticky=(S))
+        self.label_desc_text = ttk.Label(mainframe,text="Last Transaction:")
+        self.label_desc_text.grid(column=2,row=2,sticky=(W))
+        self.label_am_text = ttk.Label(mainframe,text="Last Amount:")
+        self.label_am_text.grid(column=2,row=4,sticky=(W))
+        self.label_date_text = ttk.Label(mainframe,text="Last Date:")
+        self.label_date_text.grid(column=2,row=6,sticky=(W))
+
+        #Entries
         description=StringVar()
-        description_entry = ttk.Entry(mainframe, width=7, textvariable=description)
+        description_entry = ttk.Entry(mainframe, textvariable=description)
         description_entry.grid(column=1,row=3,sticky=(W,E))
 
         amount=StringVar()
-        amount_entry = ttk.Entry(mainframe, width=7, textvariable=amount)
-        amount_entry.grid(column=2,row=3,sticky=(W,E))
+        amount_entry = ttk.Entry(mainframe, textvariable=amount)
+        amount_entry.grid(column=1,row=5,sticky=(W,E))
 
-        date_entry = tkcalendar.DateEntry(master=mainframe, width = 7)
-        date_entry.grid(column=3,row=3,sticky=(W,E))
+        date_entry = tkcalendar.DateEntry(master=mainframe, style="TEntry")
+        date_entry.grid(column=1,row=7,sticky=(W,E))
 
-        done = ttk.Button(mainframe, width=7, text="Done", command=button_pressed)
-        done.grid(column=2, row=4,rowspan=2, sticky=(N,W,E))
+        #Buttons
+        done = ttk.Button(mainframe, text="Done", command=button_pressed)
+        done.grid(column=1, row=8, sticky=(W,E), pady=(20,0))
+        clear_data = ttk.Button(mainframe, text="Clear Data", command=clear_pressed)
+        clear_data.grid(column=2, row=8, sticky=(W,E), pady=(20,0))
 
         #Config for making it pretty
         root.columnconfigure(0, weight=1)
         root.rowconfigure(0, weight=1)
         mainframe.columnconfigure(1,weight=1)
         mainframe.columnconfigure(2,weight=1)
-        mainframe.columnconfigure(3,weight=1)
-        mainframe.rowconfigure(4,weight=1)
         for child in mainframe.winfo_children():
-            child.grid_configure(padx=5,pady=5)
+            child.grid_configure(padx=8,pady=8)
         description_entry.focus()
         root.bind("<Return>", button_pressed)
 
