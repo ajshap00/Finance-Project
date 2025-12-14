@@ -33,7 +33,7 @@ def get_plaid_transactions(start, end):
             start_date = start,
             end_date = end
         )
-        messagebox.showinfo(title="Finance Tracker", message="Sucess!", icon="info")
+        messagebox.showinfo(title="Finance Tracker", message="Success!", icon="info")
     except ApiException:
         show_error()
     response = plaid_client.transactions_get(request)

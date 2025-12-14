@@ -7,6 +7,7 @@ import pandas as pd
 import tkcalendar
 import datetime
 from plaid_connection import get_plaid_transactions, show_error
+import plots
 
 load_dotenv()
 CREDENTIALS = os.getenv("GOOGLE_CREDS")
@@ -170,7 +171,7 @@ class Interface:
 
         #Mainframe
         root.title("Finance Manager")
-        root.geometry("500x300")
+        root.geometry("600x400")
         root.resizable(False, False)
         icon_path = os.path.join(os.getcwd(), 'icon.png')
 
@@ -281,6 +282,7 @@ class Interface:
             highlightthickness=0,
             bd=0,
             textvariable=amount)
+        
         amount_entry.grid(column=1,row=5,sticky=(tk.N))
         date_entry = tkcalendar.DateEntry(master=mainframe, style="TEntry")
         date_entry.grid(column=1,row=7,sticky=(tk.N))
@@ -290,14 +292,15 @@ class Interface:
         import_end_entry = tkcalendar.DateEntry(master=mainframe, style="TEntry")
         import_end_entry.grid(column=3,row=6,sticky=(tk.N))
 
-
         #Buttons
         done = ttk.Button(mainframe, text="Done", command=button_pressed)
         done.grid(column=1, row=8, sticky=(tk.N), pady=(20,0))
         clear_data = ttk.Button(mainframe, text="Clear Data", command=clear_pressed)
         clear_data.grid(column=2, row=8, sticky=(tk.N), pady=(20,0))
-        Import = ttk.Button(mainframe, text="Import From Bank", command=import_plaid_transactions)
-        Import.grid(column=3, row=8, sticky=(tk.N), pady=(20,0))
+        imports = ttk.Button(mainframe, text="Import From Bank", command=import_plaid_transactions)
+        imports.grid(column=3, row=8, sticky=(tk.N), pady=(20,0))
+        plot = ttk.Button(mainframe, text="Plot", command=plots.show_plot)
+        plot.grid(column=1, row=10, sticky=(tk.N), pady=(20,0))
 
         #Config for making it pretty
         root.columnconfigure(0, weight=1)
