@@ -1,11 +1,12 @@
-from tkinter import *
-from tkinter import ttk
+import tkinter as tk
+from tkinter import ttk, messagebox
 import os
 from dotenv import load_dotenv
 import gspread
 import pandas as pd
 import tkcalendar
 import datetime
+from plaid_connection import get_plaid_transactions, show_error
 
 load_dotenv()
 CREDENTIALS = os.getenv("GOOGLE_CREDS")
@@ -74,10 +75,9 @@ class Interface:
             clear_description()
             clear_amount()
             clear_day()
-
-            self.label_desc.config(text="")
-            self.label_am.config(text="Enter Valid Inputs")
-            self.label_date.config(text="")
+            clear_import_start_entry()
+            clear_import_end_entry()
+            show_error()
 
         #When done is pressed
         def button_pressed(event = None):
@@ -96,6 +96,8 @@ class Interface:
                 clear_description()
                 clear_amount()
                 clear_day()
+                clear_import_start_entry()
+                clear_import_end_entry()
 
                 self.label_desc.config(text=input_description)
                 self.label_am.config(text=input_amount)
@@ -121,8 +123,24 @@ class Interface:
             clear_description()
             clear_amount()
             clear_day()
+            clear_import_start_entry()
+            clear_import_end_entry()
             return
         
+        def import_plaid_transactions():
+            trans = get_plaid_transactions(get_import_start_entry(), get_import_end_entry())
+
+            for i in trans:
+                t = Transactions(
+                desc=i["name"],
+                am=-i["amount"],
+                date =i["date"]
+                )
+                t.new_transaction()
+
+            Run()
+            return
+
         #Getters and Clears
         def get_description():
             return description_entry.get()
@@ -139,11 +157,28 @@ class Interface:
         def clear_day():
             date_entry.set_date(datetime.date.today())
             return
+        def get_import_start_entry():
+            return import_start_entry.get_date()
+        def clear_import_start_entry():
+            import_start_entry.set_date(datetime.date.today())
+            return
+        def get_import_end_entry():
+            return import_end_entry.get_date()
+        def clear_import_end_entry():
+            import_end_entry.set_date(datetime.date.today())
+            return
 
         #Mainframe
         root.title("Finance Manager")
-        root.geometry("450x300")
+        root.geometry("500x300")
         root.resizable(False, False)
+        icon_path = os.path.join(os.getcwd(), 'icon.png')
+
+        try:
+            self.photo_icon = tk.PhotoImage(file=icon_path)
+            root.iconphoto(True, self.photo_icon)
+        except tk.TclError as e:
+            print("Error loading icon:", e)
 
         #Style
         style = ttk.Style()
@@ -184,65 +219,98 @@ class Interface:
             borderwidth=0,
             fieldbackground="#ECEBEB",
             foreground="#525252",
+            background="#525252",
             font=("Gilroy", 10, "bold")
         )
 
         #Frames
-        mainframe = ttk.Frame(root, padding=(3,3,12,12))
-        mainframe.grid(column=0,row=0,sticky=(N,W,E,S))
+        mainframe = ttk.Frame(root, style="TFrame", padding=(3,3,12,12))
+        mainframe.grid(column=0,row=0,sticky=(tk.N,tk.W,tk.E,tk.S))
 
         #Labels
         self.label_desc = ttk.Label(mainframe, text="")
-        self.label_desc.grid(column=2,row=3,sticky=(S))
+        self.label_desc.grid(column=2,row=3,sticky=(tk.S))
         self.label_am = ttk.Label(mainframe, text="")
-        self.label_am.grid(column=2,row=5,sticky=(S))
+        self.label_am.grid(column=2,row=5,sticky=(tk.S))
         self.label_date = ttk.Label(mainframe, text="")
-        self.label_date.grid(column=2,row=7,sticky=(S))
+        self.label_date.grid(column=2,row=7,sticky=(tk.S))
 
         self.label_newtrans = ttk.Label(mainframe,text="Enter New Transaction", style="Title.TLabel")
-        self.label_newtrans.grid(column=1,row=1, columnspan=3, sticky=(S))
+        self.label_newtrans.grid(column=2,row=1, sticky=(tk.N))
         self.label_desc_text = ttk.Label(mainframe,text="Description:")
-        self.label_desc_text.grid(column=1,row=2,sticky=(W))
+        self.label_desc_text.grid(column=1,row=2,sticky=(tk.N))
         self.label_am_text = ttk.Label(mainframe,text="Amount:")
-        self.label_am_text.grid(column=1,row=4,sticky=(W))
+        self.label_am_text.grid(column=1,row=4,sticky=(tk.N))
         self.label_date_text = ttk.Label(mainframe,text="Date:")
-        self.label_date_text.grid(column=1,row=6,sticky=(W))
-        self.label_newtrans.grid(column=1,row=1, columnspan=3, sticky=(S))
-        self.label_desc_text = ttk.Label(mainframe,text="Last Transaction:")
-        self.label_desc_text.grid(column=2,row=2,sticky=(W))
-        self.label_am_text = ttk.Label(mainframe,text="Last Amount:")
-        self.label_am_text.grid(column=2,row=4,sticky=(W))
-        self.label_date_text = ttk.Label(mainframe,text="Last Date:")
-        self.label_date_text.grid(column=2,row=6,sticky=(W))
+        self.label_date_text.grid(column=1,row=6,sticky=(tk.N))
+        self.label_newtrans.grid(column=1,row=1, columnspan=3, sticky=(tk.N))
+        self.label_last_desc_text = ttk.Label(mainframe,text="Last Transaction:")
+        self.label_last_desc_text.grid(column=2,row=2,sticky=(tk.N))
+        self.label_last_am_text = ttk.Label(mainframe,text="Last Amount:")
+        self.label_last_am_text.grid(column=2,row=4,sticky=(tk.N))
+        self.label_last_date_text = ttk.Label(mainframe,text="Last Date:")
+        self.label_last_date_text.grid(column=2,row=6,sticky=(tk.N))
+        self.label_import_text = ttk.Label(mainframe,text="Import From Bank:")
+        self.label_import_text.grid(column=3,row=2,sticky=(tk.N))
+        self.label_import_from_text = ttk.Label(mainframe,text="from:")
+        self.label_import_from_text.grid(column=3,row=3,sticky=(tk.N))
+        self.label_import_to_text = ttk.Label(mainframe,text="to:")
+        self.label_import_to_text.grid(column=3,row=5,sticky=(tk.N))
 
         #Entries
-        description=StringVar()
-        description_entry = ttk.Entry(mainframe, textvariable=description)
-        description_entry.grid(column=1,row=3,sticky=(W,E))
-
-        amount=StringVar()
-        amount_entry = ttk.Entry(mainframe, textvariable=amount)
-        amount_entry.grid(column=1,row=5,sticky=(W,E))
-
+        description=tk.StringVar()
+        description_entry = tk.Entry(
+            mainframe,
+            background="#ECEBEB",
+            foreground="#525252",
+            insertbackground="#525252",
+            font=("Gilroy", 10, "bold"),
+            relief="flat",
+            highlightthickness=0,
+            bd=0,
+            textvariable=description)
+        description_entry.grid(column=1,row=3,sticky=(tk.N))
+        amount=tk.StringVar()
+        amount_entry = tk.Entry(
+            mainframe,
+            background="#ECEBEB",
+            foreground="#525252",
+            insertbackground="#525252",
+            font=("Gilroy", 10, "bold"),
+            relief="flat",
+            highlightthickness=0,
+            bd=0,
+            textvariable=amount)
+        amount_entry.grid(column=1,row=5,sticky=(tk.N))
         date_entry = tkcalendar.DateEntry(master=mainframe, style="TEntry")
-        date_entry.grid(column=1,row=7,sticky=(W,E))
+        date_entry.grid(column=1,row=7,sticky=(tk.N))
+
+        import_start_entry = tkcalendar.DateEntry(master=mainframe, style="TEntry")
+        import_start_entry.grid(column=3,row=4,sticky=(tk.N))
+        import_end_entry = tkcalendar.DateEntry(master=mainframe, style="TEntry")
+        import_end_entry.grid(column=3,row=6,sticky=(tk.N))
+
 
         #Buttons
         done = ttk.Button(mainframe, text="Done", command=button_pressed)
-        done.grid(column=1, row=8, sticky=(W,E), pady=(20,0))
+        done.grid(column=1, row=8, sticky=(tk.N), pady=(20,0))
         clear_data = ttk.Button(mainframe, text="Clear Data", command=clear_pressed)
-        clear_data.grid(column=2, row=8, sticky=(W,E), pady=(20,0))
+        clear_data.grid(column=2, row=8, sticky=(tk.N), pady=(20,0))
+        Import = ttk.Button(mainframe, text="Import From Bank", command=import_plaid_transactions)
+        Import.grid(column=3, row=8, sticky=(tk.N), pady=(20,0))
 
         #Config for making it pretty
         root.columnconfigure(0, weight=1)
         root.rowconfigure(0, weight=1)
-        mainframe.columnconfigure(1,weight=1)
-        mainframe.columnconfigure(2,weight=1)
+        for i in range(1, 4):
+            mainframe.columnconfigure(i, weight=1, uniform="col")
+        for i in range(1, 4):   
+            mainframe.rowconfigure(i, weight=1, uniform="row")
         for child in mainframe.winfo_children():
             child.grid_configure(padx=8,pady=8)
         description_entry.focus()
         root.bind("<Return>", button_pressed)
 
-root = Tk()
+root = tk.Tk()
 Interface(root)
 root.mainloop()
