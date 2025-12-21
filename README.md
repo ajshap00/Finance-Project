@@ -49,10 +49,10 @@ This project was built as a learning-focused tool to better understand data hand
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/finance-manager.git
+   git clone https://github.com/ajshap00/finance-manager.git
 2. Install dependencies:
     ```bash
-    pip install pandas matplotlib
+    pip install pandas matplotlib gspread os dotenv tkinter plaid
 
 3. Run the application:
     ```bash
