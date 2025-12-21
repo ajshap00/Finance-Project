@@ -36,7 +36,7 @@ This project was built as a learning-focused tool to better understand data hand
 ---
 
 ## 📁 Project Structure
-      ```Finance-Manager/
+      Finance-Manager/
          │
          ├── finance_sheet.csv # Transaction data
          ├── main.py # Application entry point
