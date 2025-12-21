@@ -37,13 +37,13 @@ This project was built as a learning-focused tool to better understand data hand
 
 ## 📁 Project Structure
 Finance-Manager/
-│
-├── finance_sheet.csv # Transaction data
-├── main.py # Application entry point
-├── charts.py # Data analysis & plotting
-├── ui.py # Tkinter interface
-├── icon.jpg # App icon
-└── README.md
+   │
+   ├── finance_sheet.csv # Transaction data
+   ├── main.py # Application entry point
+   ├── charts.py # Data analysis & plotting
+   ├── ui.py # Tkinter interface
+   ├── icon.jpg # App icon
+   └── README.md
 
 ## ▶️ How to Run
 
